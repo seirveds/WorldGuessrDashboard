@@ -21,7 +21,9 @@ A modern, interactive dashboard for visualizing competitive WorldGuesser game da
 
 ## Data Setup
 
-The dashboard expects a `worldguesser_data.json` file in the project root directory. This file should contain an array of game objects with the following structure:
+The dashboard now scrapes data directly from the frontend using your WorldGuessr secret and stores the dataset in browser cookies.
+
+The stored data follows this structure:
 
 ```json
 [
@@ -67,29 +69,20 @@ The dashboard expects a `worldguesser_data.json` file in the project root direct
 ]
 ```
 
-### How to Generate the Data
+### How to Load Data
 
-#### Using the worldguesser.py Script
-
-1. **Install Python dependencies**
+1. Run the app:
    ```bash
-   pip install requests
+   npm run dev
    ```
 
-2. **Set WorldGuessr token in .env**
-   Retrieve your worldGuessr token from your browser's developer tools (Network tab) while logged in to WorldGuesser and add it to a `.env` file in the project root directory as `SECRET=your_token_here`.
+2. Open the `Data` menu in the sticky header.
 
-3. **Run the script**
-   ```bash
-   python worldguesser.py
-   ```
+3. Paste your WorldGuessr secret and click `Update Data`.
 
-4. **Verify the data**
-   - Ensure the generated `worldguesser_data.json` follows the structure shown above
-   - The file should be in the project root directory
-   - The dashboard will automatically load and visualize the data on startup
+4. The dashboard stores scraped games in cookies and loads from cookie storage on next visit.
 
-> **Note:** You'll need to obtain your session token from WorldGuesser. Check your browser's developer tools (Network tab) while logged in to find the authentication token.
+> **Note:** Cookie storage has size limits. Very large datasets may not fit and the app will show an error in that case.
 
 ## Installation
 
