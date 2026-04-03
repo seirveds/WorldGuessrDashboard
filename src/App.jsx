@@ -205,6 +205,155 @@ const COUNTRY_NAMES = {
   'PR': 'Puerto Rico',
 }
 
+const COUNTRY_BOUNDARIES = [
+  { code: 'US', minLat: 24.5, maxLat: 49.4, minLng: -125, maxLng: -66.9 },
+  { code: 'CA', minLat: 41.7, maxLat: 83.1, minLng: -141, maxLng: -52.6 },
+  { code: 'MX', minLat: 14.5, maxLat: 32.7, minLng: -118.4, maxLng: -86.7 },
+  { code: 'BR', minLat: -33.7, maxLat: 5.3, minLng: -73.9, maxLng: -34.8 },
+  { code: 'AR', minLat: -55.1, maxLat: -21.8, minLng: -73.6, maxLng: -53.6 },
+  { code: 'CL', minLat: -55.9, maxLat: -17.5, minLng: -109.5, maxLng: -66.4 },
+  { code: 'CO', minLat: -4.2, maxLat: 12.5, minLng: -79, maxLng: -66.9 },
+  { code: 'PE', minLat: -18.3, maxLat: -0.04, minLng: -81.3, maxLng: -68.7 },
+  { code: 'VE', minLat: 0.6, maxLat: 12.2, minLng: -73.4, maxLng: -59.8 },
+  { code: 'EC', minLat: -5, maxLat: 1.7, minLng: -92, maxLng: -75.2 },
+  { code: 'BO', minLat: -22.9, maxLat: -9.7, minLng: -69.6, maxLng: -57.5 },
+  { code: 'UY', minLat: -35, maxLat: -30, minLng: -58.4, maxLng: -53.1 },
+  { code: 'PY', minLat: -27.6, maxLat: -19.3, minLng: -62.6, maxLng: -54.3 },
+  { code: 'CR', minLat: 8.0, maxLat: 11.2, minLng: -85.9, maxLng: -82.6 },
+  { code: 'PA', minLat: 7.2, maxLat: 9.6, minLng: -83, maxLng: -77.2 },
+  { code: 'GT', minLat: 13.7, maxLat: 17.8, minLng: -92.2, maxLng: -88.2 },
+  { code: 'CU', minLat: 19.8, maxLat: 23.2, minLng: -84.9, maxLng: -74.1 },
+  { code: 'DO', minLat: 17.6, maxLat: 19.9, minLng: -72, maxLng: -68.3 },
+  { code: 'JM', minLat: 17.7, maxLat: 18.5, minLng: -78.4, maxLng: -76.2 },
+  { code: 'GB', minLat: 49.9, maxLat: 60.9, minLng: -8.2, maxLng: 1.8 },
+  { code: 'FR', minLat: 41.3, maxLat: 51.1, minLng: -5.1, maxLng: 9.6 },
+  { code: 'DE', minLat: 47.3, maxLat: 55.1, minLng: 5.9, maxLng: 15.0 },
+  { code: 'IT', minLat: 36.6, maxLat: 47.1, minLng: 6.6, maxLng: 18.5 },
+  { code: 'ES', minLat: 36.0, maxLat: 43.8, minLng: -9.3, maxLng: 4.3 },
+  { code: 'PT', minLat: 36.9, maxLat: 42.2, minLng: -9.5, maxLng: -6.2 },
+  { code: 'NL', minLat: 50.8, maxLat: 53.6, minLng: 3.4, maxLng: 7.2 },
+  { code: 'BE', minLat: 49.5, maxLat: 51.5, minLng: 2.5, maxLng: 6.4 },
+  { code: 'CH', minLat: 45.8, maxLat: 47.8, minLng: 5.9, maxLng: 10.5 },
+  { code: 'AT', minLat: 46.4, maxLat: 49.0, minLng: 9.5, maxLng: 17.2 },
+  { code: 'SE', minLat: 55.3, maxLat: 69.1, minLng: 11.1, maxLng: 24.2 },
+  { code: 'NO', minLat: 57.9, maxLat: 71.2, minLng: 4.5, maxLng: 31.1 },
+  { code: 'DK', minLat: 54.6, maxLat: 57.8, minLng: 8.1, maxLng: 15.2 },
+  { code: 'FI', minLat: 59.8, maxLat: 70.1, minLng: 20.5, maxLng: 31.6 },
+  { code: 'PL', minLat: 49.0, maxLat: 54.8, minLng: 14.1, maxLng: 24.1 },
+  { code: 'CZ', minLat: 48.6, maxLat: 51.1, minLng: 12.1, maxLng: 18.9 },
+  { code: 'HU', minLat: 45.7, maxLat: 48.6, minLng: 16.1, maxLng: 22.9 },
+  { code: 'RO', minLat: 43.6, maxLat: 48.3, minLng: 20.3, maxLng: 29.7 },
+  { code: 'BG', minLat: 41.2, maxLat: 44.2, minLng: 22.4, maxLng: 28.6 },
+  { code: 'GR', minLat: 34.8, maxLat: 41.7, minLng: 19.4, maxLng: 28.2 },
+  { code: 'IE', minLat: 51.4, maxLat: 55.4, minLng: -10.5, maxLng: -5.4 },
+  { code: 'HR', minLat: 42.4, maxLat: 46.5, minLng: 13.5, maxLng: 19.4 },
+  { code: 'SI', minLat: 45.4, maxLat: 46.9, minLng: 13.4, maxLng: 16.6 },
+  { code: 'SK', minLat: 47.7, maxLat: 49.6, minLng: 16.8, maxLng: 22.6 },
+  { code: 'LT', minLat: 53.9, maxLat: 56.5, minLng: 20.9, maxLng: 26.8 },
+  { code: 'LV', minLat: 55.7, maxLat: 58.1, minLng: 21.0, maxLng: 28.2 },
+  { code: 'EE', minLat: 57.5, maxLat: 59.7, minLng: 21.8, maxLng: 28.2 },
+  { code: 'RU', minLat: 41.2, maxLat: 81.9, minLng: 19.6, maxLng: -169 },
+  { code: 'UA', minLat: 44.4, maxLat: 52.4, minLng: 22.1, maxLng: 40.2 },
+  { code: 'BY', minLat: 51.3, maxLat: 56.2, minLng: 23.2, maxLng: 32.8 },
+  { code: 'TR', minLat: 35.8, maxLat: 42.1, minLng: 26.0, maxLng: 44.8 },
+  { code: 'IL', minLat: 29.5, maxLat: 33.3, minLng: 34.3, maxLng: 35.9 },
+  { code: 'SA', minLat: 16.4, maxLat: 32.2, minLng: 34.5, maxLng: 55.7 },
+  { code: 'AE', minLat: 22.6, maxLat: 26.1, minLng: 51.5, maxLng: 56.4 },
+  { code: 'IN', minLat: 6.7, maxLat: 35.5, minLng: 68.2, maxLng: 97.4 },
+  { code: 'CN', minLat: 18.2, maxLat: 53.6, minLng: 73.5, maxLng: 135.1 },
+  { code: 'JP', minLat: 24.0, maxLat: 45.5, minLng: 122.9, maxLng: 153.9 },
+  { code: 'KR', minLat: 33.1, maxLat: 38.6, minLng: 124.6, maxLng: 131.9 },
+  { code: 'TH', minLat: 5.6, maxLat: 20.5, minLng: 97.3, maxLng: 105.6 },
+  { code: 'VN', minLat: 8.6, maxLat: 23.4, minLng: 102.1, maxLng: 109.5 },
+  { code: 'ID', minLat: -11.0, maxLat: 6.0, minLng: 95.0, maxLng: 141.0 },
+  { code: 'MY', minLat: 0.9, maxLat: 7.4, minLng: 99.6, maxLng: 119.3 },
+  { code: 'SG', minLat: 1.2, maxLat: 1.5, minLng: 103.6, maxLng: 104.0 },
+  { code: 'PH', minLat: 4.6, maxLat: 21.1, minLng: 116.9, maxLng: 126.6 },
+  { code: 'TW', minLat: 21.9, maxLat: 25.3, minLng: 120.0, maxLng: 122.0 },
+  { code: 'HK', minLat: 22.2, maxLat: 22.6, minLng: 113.8, maxLng: 114.4 },
+  { code: 'AU', minLat: -43.6, maxLat: -10.7, minLng: 113.3, maxLng: 153.6 },
+  { code: 'NZ', minLat: -47.3, maxLat: -34.4, minLng: 166.4, maxLng: 178.6 },
+  { code: 'ZA', minLat: -34.8, maxLat: -22.1, minLng: 16.5, maxLng: 32.9 },
+  { code: 'EG', minLat: 22.0, maxLat: 31.7, minLng: 24.7, maxLng: 36.9 },
+  { code: 'KE', minLat: -4.7, maxLat: 5.0, minLng: 33.9, maxLng: 41.9 },
+  { code: 'NG', minLat: 4.3, maxLat: 13.9, minLng: 2.7, maxLng: 14.7 },
+  { code: 'MA', minLat: 27.7, maxLat: 35.9, minLng: -13.2, maxLng: -1.0 },
+  { code: 'TN', minLat: 30.2, maxLat: 37.5, minLng: 7.5, maxLng: 11.6 },
+  { code: 'DZ', minLat: 19.0, maxLat: 37.1, minLng: -8.7, maxLng: 12.0 },
+  { code: 'GH', minLat: 4.7, maxLat: 11.2, minLng: -3.3, maxLng: 1.2 },
+  { code: 'IS', minLat: 63.4, maxLat: 66.5, minLng: -24.5, maxLng: -13.5 },
+  { code: 'AL', minLat: 39.6, maxLat: 42.7, minLng: 19.3, maxLng: 21.1 },
+  { code: 'MK', minLat: 40.9, maxLat: 42.4, minLng: 20.5, maxLng: 23.0 },
+  { code: 'RS', minLat: 42.2, maxLat: 46.2, minLng: 18.8, maxLng: 23.0 },
+  { code: 'BA', minLat: 42.6, maxLat: 45.3, minLng: 15.7, maxLng: 19.6 },
+  { code: 'ME', minLat: 41.9, maxLat: 43.6, minLng: 18.4, maxLng: 20.4 },
+  { code: 'MD', minLat: 45.5, maxLat: 48.5, minLng: 26.6, maxLng: 30.1 },
+  { code: 'GE', minLat: 41.0, maxLat: 43.6, minLng: 40.0, maxLng: 46.7 },
+  { code: 'AM', minLat: 38.8, maxLat: 41.3, minLng: 43.4, maxLng: 46.6 },
+  { code: 'AZ', minLat: 38.4, maxLat: 41.9, minLng: 44.8, maxLng: 50.4 },
+  { code: 'KZ', minLat: 40.6, maxLat: 55.4, minLng: 46.5, maxLng: 87.3 },
+  { code: 'UZ', minLat: 37.2, maxLat: 45.6, minLng: 55.9, maxLng: 73.1 },
+  { code: 'KG', minLat: 39.2, maxLat: 43.2, minLng: 69.3, maxLng: 80.3 },
+  { code: 'TJ', minLat: 36.7, maxLat: 41.0, minLng: 67.4, maxLng: 75.1 },
+  { code: 'TM', minLat: 35.1, maxLat: 42.8, minLng: 52.4, maxLng: 66.7 },
+  { code: 'MN', minLat: 41.6, maxLat: 52.2, minLng: 87.7, maxLng: 119.9 },
+  { code: 'BD', minLat: 20.7, maxLat: 26.6, minLng: 88.0, maxLng: 92.7 },
+  { code: 'PK', minLat: 23.7, maxLat: 37.1, minLng: 60.9, maxLng: 77.8 },
+  { code: 'LK', minLat: 5.9, maxLat: 9.8, minLng: 79.7, maxLng: 81.9 },
+  { code: 'NP', minLat: 26.3, maxLat: 30.4, minLng: 80.1, maxLng: 88.2 },
+  { code: 'BT', minLat: 26.7, maxLat: 28.3, minLng: 88.8, maxLng: 92.1 },
+  { code: 'MM', minLat: 9.8, maxLat: 28.5, minLng: 92.2, maxLng: 101.2 },
+  { code: 'KH', minLat: 10.4, maxLat: 14.7, minLng: 102.3, maxLng: 107.6 },
+  { code: 'LA', minLat: 13.9, maxLat: 22.5, minLng: 100.1, maxLng: 107.7 },
+  { code: 'ET', minLat: 3.4, maxLat: 14.9, minLng: 33.0, maxLng: 48.0 },
+  { code: 'UG', minLat: -1.5, maxLat: 4.2, minLng: 29.6, maxLng: 35.0 },
+  { code: 'TZ', minLat: -11.7, maxLat: -1.0, minLng: 29.3, maxLng: 40.5 },
+  { code: 'SO', minLat: -1.7, maxLat: 11.9, minLng: 40.9, maxLng: 51.4 },
+  { code: 'SD', minLat: 8.7, maxLat: 22.0, minLng: 21.8, maxLng: 38.6 },
+  { code: 'CD', minLat: -13.5, maxLat: 5.4, minLng: 12.2, maxLng: 31.3 },
+  { code: 'AO', minLat: -18.0, maxLat: -4.4, minLng: 11.7, maxLng: 24.1 },
+  { code: 'ZM', minLat: -18.1, maxLat: -8.2, minLng: 21.9, maxLng: 33.7 },
+  { code: 'ZW', minLat: -22.4, maxLat: -15.6, minLng: 25.2, maxLng: 33.1 },
+  { code: 'BW', minLat: -26.9, maxLat: -17.8, minLng: 19.9, maxLng: 29.4 },
+  { code: 'NA', minLat: -28.9, maxLat: -16.9, minLng: 11.7, maxLng: 25.3 },
+  { code: 'MZ', minLat: -26.9, maxLat: -10.5, minLng: 30.2, maxLng: 40.8 },
+  { code: 'MG', minLat: -25.6, maxLat: -12.0, minLng: 43.2, maxLng: 50.5 },
+  { code: 'IQ', minLat: 29.1, maxLat: 37.4, minLng: 38.8, maxLng: 48.6 },
+  { code: 'IR', minLat: 25.1, maxLat: 39.8, minLng: 44.0, maxLng: 63.3 },
+  { code: 'SY', minLat: 32.3, maxLat: 37.3, minLng: 35.7, maxLng: 42.4 },
+  { code: 'LB', minLat: 33.1, maxLat: 34.7, minLng: 35.1, maxLng: 36.6 },
+  { code: 'JO', minLat: 29.2, maxLat: 33.4, minLng: 34.9, maxLng: 39.3 },
+  { code: 'YE', minLat: 12.1, maxLat: 19.0, minLng: 42.5, maxLng: 54.5 },
+  { code: 'OM', minLat: 16.6, maxLat: 26.4, minLng: 51.8, maxLng: 59.8 },
+  { code: 'KW', minLat: 28.5, maxLat: 30.1, minLng: 46.6, maxLng: 48.5 },
+  { code: 'QA', minLat: 24.5, maxLat: 26.2, minLng: 50.7, maxLng: 51.6 },
+  { code: 'BH', minLat: 25.8, maxLat: 26.3, minLng: 50.4, maxLng: 50.8 },
+  { code: 'AF', minLat: 29.4, maxLat: 38.5, minLng: 60.5, maxLng: 74.9 },
+  { code: 'PR', minLat: 17.9, maxLat: 18.5, minLng: -67.3, maxLng: -65.2 },
+]
+
+const getCountryFromCoordinates = (lat, lng) => {
+  if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return null
+  }
+
+  for (const boundary of COUNTRY_BOUNDARIES) {
+    if (lat >= boundary.minLat && lat <= boundary.maxLat) {
+      if (boundary.minLng < boundary.maxLng) {
+        if (lng >= boundary.minLng && lng <= boundary.maxLng) {
+          return boundary.code
+        }
+      } else {
+        if (lng >= boundary.minLng || lng <= boundary.maxLng) {
+          return boundary.code
+        }
+      }
+    }
+  }
+
+  return null
+}
+
 const truncateText = (text, maxLength = 18) => {
   if (!text) return ''
   if (text.length <= maxLength) return text
@@ -521,8 +670,11 @@ function App() {
         )
         if (includedGuesses.length === 0) return
         
-        const countryCode = round.location.country
-        const country = COUNTRY_NAMES[countryCode] || countryCode
+        let countryCode = round.location.country
+        if (!countryCode && round.location.lat != null && round.location.long != null) {
+          countryCode = getCountryFromCoordinates(round.location.lat, round.location.long)
+        }
+        const country = COUNTRY_NAMES[countryCode] || countryCode || 'Unknown'
         if (!countryPerformance[country]) {
           countryPerformance[country] = { total: 0, count: 0, country }
         }
