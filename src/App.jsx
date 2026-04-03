@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Trophy, TrendingUp, Target, Clock, Globe, Award, BarChart3, TrendingDown, Info, Filter, Sun, Moon, Database } from 'lucide-react'
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { scrapeGamesFromSecret, loadGamesFromCookie, saveGamesToCookie, clearGamesCookie } from './lib/worldguessrScraper'
 
 const CHART_SERIES = {
@@ -231,8 +231,10 @@ function App() {
   const [gameData, setGameData] = useState([])
   const [excludedUsers, setExcludedUsers] = useState([])
   const [roundTypeFilter, setRoundTypeFilter] = useState('all')
+  const [activeTab, setActiveTab] = useState('my')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isDataOpen, setIsDataOpen] = useState(false)
+  const [myUsernameInput, setMyUsernameInput] = useState(() => localStorage.getItem('wg-username') || '')
   const [secretInput, setSecretInput] = useState('')
   const [isScraping, setIsScraping] = useState(false)
   const [scrapeStatus, setScrapeStatus] = useState('')
@@ -249,6 +251,66 @@ function App() {
     [gameData, roundTypeFilter]
   )
 
+  const knownUsernames = useMemo(() => {
+    const usernames = new Set()
+
+    gameData.forEach(game => {
+      if (game?.userPlayer?.username) usernames.add(game.userPlayer.username)
+      game.game?.rounds?.forEach(round => {
+        round.allGuesses?.forEach(guess => {
+          if (guess.username) usernames.add(guess.username)
+        })
+      })
+    })
+
+    return Array.from(usernames)
+  }, [gameData])
+
+  const currentUsername = useMemo(() => {
+    const preferredUsername = myUsernameInput.trim()
+    if (preferredUsername) {
+      const exactMatch = knownUsernames.find(username => username === preferredUsername)
+      if (exactMatch) return exactMatch
+
+      const caseInsensitiveMatch = knownUsernames.find(
+        username => username.toLowerCase() === preferredUsername.toLowerCase()
+      )
+      if (caseInsensitiveMatch) return caseInsensitiveMatch
+
+      return preferredUsername
+    }
+
+    const usernames = gameData
+      .map(game => game?.userPlayer?.username)
+      .filter(Boolean)
+
+    if (usernames.length === 0) return ''
+
+    const counts = usernames.reduce((acc, username) => {
+      acc[username] = (acc[username] || 0) + 1
+      return acc
+    }, {})
+
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || ''
+  }, [gameData, knownUsernames, myUsernameInput])
+
+  const currentPlayerId = useMemo(() => {
+    const playerIds = gameData
+      .map(game => game?.userPlayer?.playerId)
+      .filter(Boolean)
+
+    if (playerIds.length === 0) return ''
+
+    const counts = playerIds.reduce((acc, playerId) => {
+      acc[playerId] = (acc[playerId] || 0) + 1
+      return acc
+    }, {})
+
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || ''
+  }, [gameData])
+
   const allUsers = useMemo(() => {
     const usernames = new Set()
     filteredGames.forEach(game => {
@@ -260,6 +322,58 @@ function App() {
     })
     return Array.from(usernames).sort((a, b) => a.localeCompare(b))
   }, [filteredGames])
+
+  const activeExcludedUsers = useMemo(() => {
+    if (activeTab !== 'my' || !currentUsername || !allUsers.includes(currentUsername)) {
+      return excludedUsers
+    }
+
+    return allUsers.filter(username => username !== currentUsername)
+  }, [activeTab, allUsers, currentUsername, excludedUsers])
+
+  const myRoundDensityData = useMemo(() => {
+    if (!currentUsername && !currentPlayerId) return []
+
+    const BIN_SIZE = 250
+    const MAX_POINTS = 5000
+    const totalBins = Math.ceil(MAX_POINTS / BIN_SIZE)
+    const bins = Array.from({ length: totalBins }, (_, index) => ({
+      binStart: index * BIN_SIZE,
+      binEnd: (index + 1) * BIN_SIZE,
+      rounds: 0
+    }))
+
+    let totalRounds = 0
+
+    filteredGames.forEach(game => {
+      game.game?.rounds?.forEach(round => {
+        const myGuess = round.allGuesses?.find(guess => {
+          if (currentPlayerId && guess.playerId === currentPlayerId) return true
+          if (currentUsername && guess.username === currentUsername) return true
+          return false
+        })
+        if (!myGuess) return
+
+        const points = Number(myGuess.points)
+        if (!Number.isFinite(points)) return
+
+        const safePoints = Math.min(MAX_POINTS - 1, Math.max(0, points))
+        const binIndex = Math.floor(safePoints / BIN_SIZE)
+        if (!bins[binIndex]) return
+
+        bins[binIndex].rounds += 1
+        totalRounds += 1
+      })
+    })
+
+    return bins
+      .filter(bin => bin.rounds > 0)
+      .map(bin => ({
+        range: `${bin.binStart}-${bin.binEnd}`,
+        density: totalRounds > 0 ? Number(((bin.rounds / totalRounds) * 100).toFixed(2)) : 0,
+        rounds: bin.rounds
+      }))
+  }, [filteredGames, currentPlayerId, currentUsername])
 
   const toggleUserExclusion = (username) => {
     setExcludedUsers(prev =>
@@ -279,7 +393,7 @@ function App() {
 
   useEffect(() => {
     processGameData()
-  }, [excludedUsers, filteredGames])
+  }, [activeExcludedUsers, filteredGames])
 
   useEffect(() => {
     setExcludedUsers(prev => prev.filter(user => allUsers.includes(user)))
@@ -288,6 +402,15 @@ function App() {
   useEffect(() => {
     localStorage.setItem('wg-theme', theme)
   }, [theme])
+
+  useEffect(() => {
+    const username = myUsernameInput.trim()
+    if (username) {
+      localStorage.setItem('wg-username', username)
+    } else {
+      localStorage.removeItem('wg-username')
+    }
+  }, [myUsernameInput])
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -305,7 +428,12 @@ function App() {
   }, [])
 
   const handleScrapeData = async () => {
+    const username = myUsernameInput.trim()
     const secret = secretInput.trim()
+    if (!username) {
+      setDataError('Please enter your username first.')
+      return
+    }
     if (!secret) {
       setDataError('Please enter your WorldGuessr secret first.')
       return
@@ -375,7 +503,7 @@ function App() {
     const playerStats = {}
     const gamesByDate = {}
     const countryPerformance = {}
-    const excludedUsersSet = new Set(excludedUsers)
+    const excludedUsersSet = new Set(activeExcludedUsers)
     let totalIncludedGames = 0
     
     filteredGames.forEach(game => {
@@ -518,6 +646,14 @@ function App() {
   }
 
   const topPlayer = stats.playerRankings[0]
+  const myPlayer = currentUsername
+    ? stats.playerRankings.find(player => player.username === currentUsername) || stats.playerRankings[0]
+    : stats.playerRankings[0]
+  const displayedRows = activeTab === 'my'
+    ? (currentUsername
+      ? stats.playerRankings.filter(player => player.username === currentUsername)
+      : stats.playerRankings)
+    : stats.playerRankings
   const isDark = theme === 'dark'
   const pageClass = isDark
     ? 'bg-[radial-gradient(circle_at_top,_#1e293b_0%,_#0f172a_40%,_#020617_100%)] text-slate-100'
@@ -590,6 +726,17 @@ function App() {
                 <p className="text-sm font-semibold">Update Game Data</p>
                 <p className={`mt-1 text-xs ${textMutedClass}`}>Paste your WorldGuessr secret and fetch fresh data into cookie storage.</p>
                 <input
+                  type="text"
+                  value={myUsernameInput}
+                  onChange={(event) => setMyUsernameInput(event.target.value)}
+                  placeholder="Enter your username"
+                  className={`mt-3 w-full rounded-md border px-3 py-2 text-sm outline-none ${
+                    isDark
+                      ? 'border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-500 focus:border-slate-500'
+                      : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-400'
+                  }`}
+                />
+                <input
                   type="password"
                   value={secretInput}
                   onChange={(event) => setSecretInput(event.target.value)}
@@ -604,7 +751,7 @@ function App() {
                   <button
                     type="button"
                     onClick={handleScrapeData}
-                    disabled={isScraping}
+                    disabled={isScraping || !myUsernameInput.trim()}
                     className={`rounded-md px-2.5 py-1.5 text-xs transition-colors ${
                       isDark ? 'bg-indigo-600 text-white hover:bg-indigo-500 disabled:bg-indigo-800' : 'bg-indigo-600 text-white hover:bg-indigo-500 disabled:bg-indigo-300'
                     }`}
@@ -663,50 +810,62 @@ function App() {
                   ))}
                 </div>
 
-                <div className={`my-3 h-px ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`} />
-                <p className="text-sm font-semibold">Players</p>
-                <p className={`mt-1 text-xs ${textMutedClass}`}>Uncheck players to remove them from all statistics.</p>
-                <div className="mt-3 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setExcludedUsers([])}
-                    className={`rounded-md px-2.5 py-1.5 text-xs transition-colors ${
-                      isDark ? 'bg-slate-800 hover:bg-slate-700' : 'bg-slate-100 hover:bg-slate-200'
-                    }`}
-                  >
-                    Select All
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setExcludedUsers(allUsers)}
-                    className={`rounded-md px-2.5 py-1.5 text-xs transition-colors ${
-                      isDark ? 'bg-slate-800 hover:bg-slate-700' : 'bg-slate-100 hover:bg-slate-200'
-                    }`}
-                  >
-                    Exclude All
-                  </button>
-                </div>
-                <div className="mt-3 max-h-64 overflow-y-auto space-y-2 pr-1">
-                  {allUsers.map(username => {
-                    const isIncluded = !excludedUsers.includes(username)
-                    return (
-                      <label
-                        key={username}
-                        className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer transition-colors ${
-                          isDark ? 'bg-slate-800/80 hover:bg-slate-700' : 'bg-slate-100 hover:bg-slate-200'
+                {activeTab === 'competitive' ? (
+                  <>
+                    <div className={`my-3 h-px ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`} />
+                    <p className="text-sm font-semibold">Players</p>
+                    <p className={`mt-1 text-xs ${textMutedClass}`}>Uncheck players to remove them from all statistics.</p>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setExcludedUsers([])}
+                        className={`rounded-md px-2.5 py-1.5 text-xs transition-colors ${
+                          isDark ? 'bg-slate-800 hover:bg-slate-700' : 'bg-slate-100 hover:bg-slate-200'
                         }`}
                       >
-                        <input
-                          type="checkbox"
-                          checked={isIncluded}
-                          onChange={() => toggleUserExclusion(username)}
-                          className="accent-emerald-500"
-                        />
-                        <span className="truncate">{username}</span>
-                      </label>
-                    )
-                  })}
-                </div>
+                        Select All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setExcludedUsers(allUsers)}
+                        className={`rounded-md px-2.5 py-1.5 text-xs transition-colors ${
+                          isDark ? 'bg-slate-800 hover:bg-slate-700' : 'bg-slate-100 hover:bg-slate-200'
+                        }`}
+                      >
+                        Exclude All
+                      </button>
+                    </div>
+                    <div className="mt-3 max-h-64 overflow-y-auto space-y-2 pr-1">
+                      {allUsers.map(username => {
+                        const isIncluded = !excludedUsers.includes(username)
+                        return (
+                          <label
+                            key={username}
+                            className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer transition-colors ${
+                              isDark ? 'bg-slate-800/80 hover:bg-slate-700' : 'bg-slate-100 hover:bg-slate-200'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isIncluded}
+                              onChange={() => toggleUserExclusion(username)}
+                              className="accent-emerald-500"
+                            />
+                            <span className="truncate">{username}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className={`my-3 h-px ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`} />
+                    <p className="text-sm font-semibold">Players</p>
+                    <p className={`mt-1 text-xs ${textMutedClass}`}>
+                      My Stats is automatically filtered to `{currentUsername || 'your profile'}`.
+                    </p>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -721,6 +880,36 @@ function App() {
           </div>
         )}
 
+        <div className="mb-8 flex flex-wrap items-center gap-2">
+          {[
+            { key: 'my', label: 'My Stats' },
+            { key: 'competitive', label: 'Competitive Stats' }
+          ].map(tab => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => {
+                setActiveTab(tab.key)
+                setIsFilterOpen(false)
+              }}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                activeTab === tab.key
+                  ? 'bg-indigo-600 text-white'
+                  : isDark
+                    ? 'bg-slate-800 text-slate-100 hover:bg-slate-700'
+                    : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+          {activeTab === 'my' && currentUsername && (
+            <span className={`text-xs ${textMutedClass}`}>
+              Auto-filtering to `{currentUsername}`
+            </span>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <StatCard
             icon={<Trophy className="w-8 h-8" />}
@@ -730,87 +919,131 @@ function App() {
             tooltip="This is how many games are in your data."
             isDark={isDark}
           />
-          <StatCard
-            icon={<Award className="w-8 h-8" />}
-            title="Top Player"
-            value={topPlayer?.username || 'N/A'}
-            color="bg-amber-500"
-            tooltip="The player with the most points overall."
-            isDark={isDark}
-          />
-          <StatCard
-            icon={<Target className="w-8 h-8" />}
-            title="Top Score"
-            value={topPlayer ? topPlayer.totalPoints.toLocaleString() : '-'}
-            color="bg-emerald-500"
-            tooltip="The highest total points reached by any player."
-            isDark={isDark}
-          />
+          {activeTab === 'my' ? (
+            <>
+              <StatCard
+                icon={<Target className="w-8 h-8" />}
+                title="My Avg Points"
+                value={myPlayer ? myPlayer.avgPoints : '-'}
+                color="bg-emerald-500"
+                tooltip="Your average points per round."
+                isDark={isDark}
+              />
+              <StatCard
+                icon={<Award className="w-8 h-8" />}
+                title="My Win Rate"
+                value={myPlayer ? `${myPlayer.winRate}%` : '-'}
+                color="bg-amber-500"
+                tooltip="Your win percentage in included games."
+                isDark={isDark}
+              />
+            </>
+          ) : (
+            <>
+              <StatCard
+                icon={<Award className="w-8 h-8" />}
+                title="Top Player"
+                value={topPlayer?.username || 'N/A'}
+                color="bg-amber-500"
+                tooltip="The player with the most points overall."
+                isDark={isDark}
+              />
+              <StatCard
+                icon={<Target className="w-8 h-8" />}
+                title="Top Score"
+                value={topPlayer ? topPlayer.totalPoints.toLocaleString() : '-'}
+                color="bg-emerald-500"
+                tooltip="The highest total points reached by any player."
+                isDark={isDark}
+              />
+            </>
+          )}
         </div>
+
+        {activeTab === 'competitive' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <ChartCard
+              title="Player Rankings"
+              icon={<BarChart3 />}
+              tooltip="Compares players by their total points, from highest to lowest."
+              isDark={isDark}
+            >
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={stats.playerRankings}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
+                  <XAxis dataKey="username" stroke={chartAxisColor} />
+                  <YAxis stroke={chartAxisColor} />
+                  <Tooltip 
+                    contentStyle={tooltipTheme}
+                    labelStyle={tooltipLabelTheme}
+                  />
+                  <Legend />
+                  <Bar dataKey="totalPoints" fill={chartSeries.primary} name="Total Points" />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+
+            <ChartCard
+              title="Win Rate Comparison"
+              icon={<Trophy />}
+              tooltip="Shows how often each player wins their games."
+              isDark={isDark}
+            >
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={stats.playerRankings}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
+                  <XAxis dataKey="username" stroke={chartAxisColor} />
+                  <YAxis stroke={chartAxisColor} />
+                  <Tooltip 
+                    contentStyle={tooltipTheme}
+                    labelStyle={tooltipLabelTheme}
+                  />
+                  <Legend />
+                  <Bar dataKey="winRate" fill={chartSeries.secondary} name="Win Rate %" />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <ChartCard
-            title="Player Rankings"
-            icon={<BarChart3 />}
-            tooltip="Compares players by their total points, from highest to lowest."
-            isDark={isDark}
-          >
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={stats.playerRankings}>
-                <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
-                <XAxis dataKey="username" stroke={chartAxisColor} />
-                <YAxis stroke={chartAxisColor} />
-                <Tooltip 
-                  contentStyle={tooltipTheme}
-                  labelStyle={tooltipLabelTheme}
-                />
-                <Legend />
-                <Bar dataKey="totalPoints" fill={chartSeries.primary} name="Total Points" />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-
-          <ChartCard
-            title="Win Rate Comparison"
-            icon={<Trophy />}
-            tooltip="Shows how often each player wins their games."
-            isDark={isDark}
-          >
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={stats.playerRankings}>
-                <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
-                <XAxis dataKey="username" stroke={chartAxisColor} />
-                <YAxis stroke={chartAxisColor} />
-                <Tooltip 
-                  contentStyle={tooltipTheme}
-                  labelStyle={tooltipLabelTheme}
-                />
-                <Legend />
-                <Bar dataKey="winRate" fill={chartSeries.secondary} name="Win Rate %" />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          <ChartCard
-            title="Average Points per Round"
+            title={activeTab === 'my' ? 'My Round Score Density' : 'Average Points per Round'}
             icon={<TrendingUp />}
-            tooltip="Shows each player's usual points in a round."
+            tooltip={activeTab === 'my' ? 'Shows how often your round scores fall into each point range.' : 'Shows each player\'s usual points in a round.'}
             isDark={isDark}
           >
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={stats.playerRankings} layout="horizontal">
-                <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
-                <XAxis dataKey="username" stroke={chartAxisColor} />
-                <YAxis stroke={chartAxisColor} />
-                <Tooltip 
-                  contentStyle={tooltipTheme}
-                  labelStyle={tooltipLabelTheme}
-                />
-                <Legend />
-                <Bar dataKey="avgPoints" fill={chartSeries.accent} name="Avg Points" />
-              </BarChart>
+              {activeTab === 'my' ? (
+                <AreaChart data={myRoundDensityData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
+                  <XAxis dataKey="range" stroke={chartAxisColor} tick={{ fontSize: 11 }} interval="preserveStartEnd" />
+                  <YAxis stroke={chartAxisColor} unit="%" />
+                  <Tooltip
+                    contentStyle={tooltipTheme}
+                    labelStyle={tooltipLabelTheme}
+                    formatter={(value, name, payload) => {
+                      if (name === 'density') return [`${value}%`, 'Density']
+                      if (name === 'rounds') return [value, 'Rounds']
+                      return [value, payload?.name || 'Value']
+                    }}
+                  />
+                  <Legend />
+                  <Area type="monotone" dataKey="density" stroke={chartSeries.accent} fill={chartSeries.accent} fillOpacity={0.28} name="Density" />
+                </AreaChart>
+              ) : (
+                <BarChart data={stats.playerRankings} layout="horizontal">
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
+                  <XAxis dataKey="username" stroke={chartAxisColor} />
+                  <YAxis stroke={chartAxisColor} />
+                  <Tooltip 
+                    contentStyle={tooltipTheme}
+                    labelStyle={tooltipLabelTheme}
+                  />
+                  <Legend />
+                  <Bar dataKey="avgPoints" fill={chartSeries.accent} name="Avg Points" />
+                </BarChart>
+              )}
             </ResponsiveContainer>
           </ChartCard>
 
@@ -894,49 +1127,51 @@ function App() {
           </ChartCard>
         </div>
 
-        <div className={`backdrop-blur-lg rounded-2xl p-6 ${surfaceClass}`}>
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-            <Trophy className="w-6 h-6" />
-            Detailed Player Statistics
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className={isDark ? 'border-b border-slate-700' : 'border-b border-slate-200'}>
-                  <th className="text-left p-3">Rank</th>
-                  <th className="text-left p-3">Player</th>
-                  <th className="text-right p-3">Total Points</th>
-                  <th className="text-right p-3">Avg Points</th>
-                  <th className="text-right p-3">Games</th>
-                  <th className="text-right p-3">Wins</th>
-                  <th className="text-right p-3">Win Rate</th>
-                  <th className="text-right p-3">Best Round</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.playerRankings.map((player, index) => (
-                  <tr
-                    key={player.username}
-                    className={`transition-colors ${isDark ? 'border-b border-slate-800 hover:bg-slate-800/60' : 'border-b border-slate-100 hover:bg-slate-100/70'}`}
-                  >
-                    <td className="p-3">
-                      <span className={`font-bold ${index === 0 ? 'text-amber-400' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-amber-600' : ''}`}>
-                        #{index + 1}
-                      </span>
-                    </td>
-                    <td className="p-3 font-semibold">{player.username}</td>
-                    <td className="text-right p-3">{player.totalPoints.toLocaleString()}</td>
-                    <td className="text-right p-3">{player.avgPoints}</td>
-                    <td className="text-right p-3">{player.totalGames}</td>
-                    <td className="text-right p-3">{player.wins}</td>
-                    <td className="text-right p-3">{player.winRate}%</td>
-                    <td className="text-right p-3 text-emerald-400">{player.bestRound}</td>
+        {activeTab === 'competitive' && (
+          <div className={`backdrop-blur-lg rounded-2xl p-6 ${surfaceClass}`}>
+            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+              <Trophy className="w-6 h-6" />
+              Detailed Player Statistics
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className={isDark ? 'border-b border-slate-700' : 'border-b border-slate-200'}>
+                    <th className="text-left p-3">Rank</th>
+                    <th className="text-left p-3">Player</th>
+                    <th className="text-right p-3">Total Points</th>
+                    <th className="text-right p-3">Avg Points</th>
+                    <th className="text-right p-3">Games</th>
+                    <th className="text-right p-3">Wins</th>
+                    <th className="text-right p-3">Win Rate</th>
+                    <th className="text-right p-3">Best Round</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {displayedRows.map((player, index) => (
+                    <tr
+                      key={player.username}
+                      className={`transition-colors ${isDark ? 'border-b border-slate-800 hover:bg-slate-800/60' : 'border-b border-slate-100 hover:bg-slate-100/70'}`}
+                    >
+                      <td className="p-3">
+                        <span className={`font-bold ${index === 0 ? 'text-amber-400' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-amber-600' : ''}`}>
+                          #{index + 1}
+                        </span>
+                      </td>
+                      <td className="p-3 font-semibold">{player.username}</td>
+                      <td className="text-right p-3">{player.totalPoints.toLocaleString()}</td>
+                      <td className="text-right p-3">{player.avgPoints}</td>
+                      <td className="text-right p-3">{player.totalGames}</td>
+                      <td className="text-right p-3">{player.wins}</td>
+                      <td className="text-right p-3">{player.winRate}%</td>
+                      <td className="text-right p-3 text-emerald-400">{player.bestRound}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )
