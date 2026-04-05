@@ -1,7 +1,9 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, Fragment } from 'react'
 import { Trophy, TrendingUp, Target, Clock, Globe, Award, BarChart3, TrendingDown, Info, Filter, Sun, Moon, Database } from 'lucide-react'
 import { BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { ComposableMap, Geographies, Geography, ZoomableGroup, Marker, Line as MapLine } from 'react-simple-maps'
 import { scrapeGamesFromSecret, loadGamesFromCookie, saveGamesToCookie, clearGamesCookie } from './lib/worldguessrScraper'
+import ConfusionMatrixHeatmap from './components/ConfusionMatrixHeatmap'
 
 const CHART_SERIES = {
   dark: {
@@ -22,6 +24,222 @@ const CHART_SERIES = {
     negative: '#e11d48',
     frequency: '#2563eb'
   }
+}
+
+const GEOJSON_TO_COUNTRY_NAME = {
+  'United States of America': 'United States',
+  'United Kingdom': 'United Kingdom',
+  'Russian Federation': 'Russia',
+  'South Korea': 'South Korea',
+  'Republic of Korea': 'South Korea',
+  'North Korea': 'North Korea',
+  'Democratic Republic of Korea': 'North Korea',
+  'Czech Republic': 'Czech Republic',
+  'Czechia': 'Czech Republic',
+  'Republic of Serbia': 'Serbia',
+  'Bosnia and Herz.': 'Bosnia and Herzegovina',
+  'Dominican Rep.': 'Dominican Republic',
+  'Eq. Guinea': 'Equatorial Guinea',
+  'Central African Rep.': 'Central African Republic',
+  'S. Sudan': 'South Sudan',
+  'Dem. Rep. Congo': 'DR Congo',
+  'Congo': 'Congo',
+  'Republic of the Congo': 'Congo',
+  'Côte d\'Ivoire': 'Ivory Coast',
+  'eSwatini': 'Eswatini',
+  'Swaziland': 'Eswatini',
+  'Macedonia': 'North Macedonia',
+  'Lao PDR': 'Laos',
+  'Timor-Leste': 'East Timor',
+  'Palestine': 'Palestine',
+  'West Bank': 'Palestine',
+  'Falkland Is.': 'Falkland Islands',
+  'Fr. S. Antarctic Lands': 'French Southern Territories',
+  'W. Sahara': 'Western Sahara',
+  'Solomon Is.': 'Solomon Islands',
+  'N. Cyprus': 'Cyprus',
+  'Somaliland': 'Somalia',
+}
+
+const COUNTRY_NAME_TO_ISO3 = {
+  'United States': 'USA',
+  'United Kingdom': 'GBR',
+  'Canada': 'CAN',
+  'Australia': 'AUS',
+  'Germany': 'DEU',
+  'France': 'FRA',
+  'Italy': 'ITA',
+  'Spain': 'ESP',
+  'Netherlands': 'NLD',
+  'Belgium': 'BEL',
+  'Switzerland': 'CHE',
+  'Austria': 'AUT',
+  'Sweden': 'SWE',
+  'Norway': 'NOR',
+  'Denmark': 'DNK',
+  'Finland': 'FIN',
+  'Poland': 'POL',
+  'Czech Republic': 'CZE',
+  'Hungary': 'HUN',
+  'Romania': 'ROU',
+  'Bulgaria': 'BGR',
+  'Greece': 'GRC',
+  'Portugal': 'PRT',
+  'Ireland': 'IRL',
+  'Croatia': 'HRV',
+  'Slovenia': 'SVN',
+  'Slovakia': 'SVK',
+  'Lithuania': 'LTU',
+  'Latvia': 'LVA',
+  'Estonia': 'EST',
+  'Russia': 'RUS',
+  'Ukraine': 'UKR',
+  'Belarus': 'BLR',
+  'Turkey': 'TUR',
+  'Israel': 'ISR',
+  'Saudi Arabia': 'SAU',
+  'UAE': 'ARE',
+  'India': 'IND',
+  'China': 'CHN',
+  'Japan': 'JPN',
+  'South Korea': 'KOR',
+  'Thailand': 'THA',
+  'Vietnam': 'VNM',
+  'Indonesia': 'IDN',
+  'Malaysia': 'MYS',
+  'Singapore': 'SGP',
+  'Philippines': 'PHL',
+  'Taiwan': 'TWN',
+  'Hong Kong': 'HKG',
+  'New Zealand': 'NZL',
+  'South Africa': 'ZAF',
+  'Egypt': 'EGY',
+  'Kenya': 'KEN',
+  'Nigeria': 'NGA',
+  'Morocco': 'MAR',
+  'Tunisia': 'TUN',
+  'Algeria': 'DZA',
+  'Ghana': 'GHA',
+  'Brazil': 'BRA',
+  'Mexico': 'MEX',
+  'Argentina': 'ARG',
+  'Chile': 'CHL',
+  'Colombia': 'COL',
+  'Peru': 'PER',
+  'Venezuela': 'VEN',
+  'Ecuador': 'ECU',
+  'Bolivia': 'BOL',
+  'Uruguay': 'URY',
+  'Paraguay': 'PRY',
+  'Costa Rica': 'CRI',
+  'Panama': 'PAN',
+  'Guatemala': 'GTM',
+  'Cuba': 'CUB',
+  'Dominican Republic': 'DOM',
+  'Jamaica': 'JAM',
+  'Trinidad and Tobago': 'TTO',
+  'Iceland': 'ISL',
+  'Luxembourg': 'LUX',
+  'Malta': 'MLT',
+  'Cyprus': 'CYP',
+  'Albania': 'ALB',
+  'North Macedonia': 'MKD',
+  'Serbia': 'SRB',
+  'Bosnia and Herzegovina': 'BIH',
+  'Montenegro': 'MNE',
+  'Moldova': 'MDA',
+  'Georgia': 'GEO',
+  'Armenia': 'ARM',
+  'Azerbaijan': 'AZE',
+  'Kazakhstan': 'KAZ',
+  'Uzbekistan': 'UZB',
+  'Kyrgyzstan': 'KGZ',
+  'Tajikistan': 'TJK',
+  'Turkmenistan': 'TKM',
+  'Mongolia': 'MNG',
+  'Bangladesh': 'BGD',
+  'Pakistan': 'PAK',
+  'Sri Lanka': 'LKA',
+  'Nepal': 'NPL',
+  'Bhutan': 'BTN',
+  'Myanmar': 'MMR',
+  'Cambodia': 'KHM',
+  'Laos': 'LAO',
+  'Brunei': 'BRN',
+  'East Timor': 'TLS',
+  'Papua New Guinea': 'PNG',
+  'Fiji': 'FJI',
+  'New Caledonia': 'NCL',
+  'French Polynesia': 'PYF',
+  'Samoa': 'WSM',
+  'Tonga': 'TON',
+  'Vanuatu': 'VUT',
+  'Solomon Islands': 'SLB',
+  'Kiribati': 'KIR',
+  'Marshall Islands': 'MHL',
+  'Micronesia': 'FSM',
+  'Palau': 'PLW',
+  'Nauru': 'NRU',
+  'Tuvalu': 'TUV',
+  'Ethiopia': 'ETH',
+  'Uganda': 'UGA',
+  'Tanzania': 'TZA',
+  'Rwanda': 'RWA',
+  'Burundi': 'BDI',
+  'Somalia': 'SOM',
+  'Djibouti': 'DJI',
+  'Eritrea': 'ERI',
+  'Sudan': 'SDN',
+  'South Sudan': 'SSD',
+  'DR Congo': 'COD',
+  'Congo': 'COG',
+  'Gabon': 'GAB',
+  'Equatorial Guinea': 'GNQ',
+  'Cameroon': 'CMR',
+  'Central African Republic': 'CAF',
+  'Chad': 'TCD',
+  'Niger': 'NER',
+  'Mali': 'MLI',
+  'Burkina Faso': 'BFA',
+  'Senegal': 'SEN',
+  'Gambia': 'GMB',
+  'Guinea': 'GIN',
+  'Guinea-Bissau': 'GNB',
+  'Sierra Leone': 'SLE',
+  'Liberia': 'LBR',
+  'Ivory Coast': 'CIV',
+  'Benin': 'BEN',
+  'Togo': 'TGO',
+  'Mauritania': 'MRT',
+  'Zambia': 'ZMB',
+  'Zimbabwe': 'ZWE',
+  'Botswana': 'BWA',
+  'Namibia': 'NAM',
+  'Lesotho': 'LSO',
+  'Eswatini': 'SWZ',
+  'Mozambique': 'MOZ',
+  'Malawi': 'MWI',
+  'Madagascar': 'MDG',
+  'Mauritius': 'MUS',
+  'Seychelles': 'SYC',
+  'Comoros': 'COM',
+  'Réunion': 'REU',
+  'Mayotte': 'MYT',
+  'Angola': 'AGO',
+  'São Tomé and Príncipe': 'STP',
+  'Iraq': 'IRQ',
+  'Iran': 'IRN',
+  'Syria': 'SYR',
+  'Lebanon': 'LBN',
+  'Jordan': 'JOR',
+  'Palestine': 'PSE',
+  'Yemen': 'YEM',
+  'Oman': 'OMN',
+  'Kuwait': 'KWT',
+  'Bahrain': 'BHR',
+  'Qatar': 'QAT',
+  'Afghanistan': 'AFG',
+  'Puerto Rico': 'PRI',
 }
 
 const COUNTRY_NAMES = {
@@ -639,20 +857,23 @@ function App() {
     if (!gameData.length) {
       setStats({
         playerRankings: [],
+        allCountries: [],
         topCountries: [],
         worstCountries: [],
         mostOccurringCountries: [],
         performanceOverTime: [],
+        confusionMatrix: {},
         totalGames: 0,
         totalPlayers: 0
       })
       return
     }
 
+    const excludedUsersSet = new Set(activeExcludedUsers)
     const playerStats = {}
     const gamesByDate = {}
     const countryPerformance = {}
-    const excludedUsersSet = new Set(activeExcludedUsers)
+    const confusionMatrix = {}
     let totalIncludedGames = 0
     
     filteredGames.forEach(game => {
@@ -709,6 +930,20 @@ function App() {
 
           roundPointsTotal += guess.points
           roundGuessCount++
+          
+          // Extract guessed country for confusion matrix
+          if (guess.guessLat != null && guess.guessLong != null) {
+            let guessedCountryCode = getCountryFromCoordinates(guess.guessLat, guess.guessLong)
+            const guessedCountry = COUNTRY_NAMES[guessedCountryCode] || guessedCountryCode || 'Unknown'
+            
+            if (!confusionMatrix[country]) {
+              confusionMatrix[country] = {}
+            }
+            if (!confusionMatrix[country][guessedCountry]) {
+              confusionMatrix[country][guessedCountry] = 0
+            }
+            confusionMatrix[country][guessedCountry]++
+          }
         })
 
         if (roundGuessCount > 0) {
@@ -756,13 +991,18 @@ function App() {
       .filter(c => c.count > 0)
       .map(c => ({ 
         ...c, 
-        avgPoints: Math.round(c.total / c.count),
-        country: truncateText(c.country, 18)
+        avgPoints: Math.round(c.total / c.count)
       }))
       .sort((a, b) => b.avgPoints - a.avgPoints)
     
-    const topCountries = allCountries.slice(0, 10)
-    const worstCountries = allCountries.slice(-10).reverse()
+    const topCountries = allCountries.slice(0, 10).map(c => ({
+      ...c,
+      country: truncateText(c.country, 18)
+    }))
+    const worstCountries = allCountries.slice(-10).reverse().map(c => ({
+      ...c,
+      country: truncateText(c.country, 18)
+    }))
     const mostOccurringCountries = [...allCountries]
       .sort((a, b) => b.count - a.count)
       .slice(0, 5)
@@ -780,10 +1020,12 @@ function App() {
 
     setStats({
       playerRankings,
+      allCountries,
       topCountries,
       worstCountries,
       mostOccurringCountries,
       performanceOverTime,
+      confusionMatrix,
       totalGames: totalIncludedGames,
       totalPlayers: Object.keys(playerStats).length
     })
@@ -1221,41 +1463,32 @@ function App() {
           </ChartCard>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="mb-8">
           <ChartCard
-            title="Top Countries by Performance"
-            icon={<TrendingUp />}
-            tooltip="Countries with the highest average points."
+            title="Country Performance Map"
+            icon={<Globe />}
+            tooltip="World map showing country performance by color gradient. Red indicates worst performance, yellow is average, and green is best performance. Hover over countries to see detailed statistics."
             isDark={isDark}
           >
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={stats.topCountries} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
-                <XAxis type="number" stroke={chartAxisColor} />
-                <YAxis type="category" dataKey="country" stroke={chartAxisColor} width={120} interval={0} />
-                <Tooltip content={<CountryBarTooltip isDark={isDark} />} />
-                <Legend />
-                <Bar dataKey="avgPoints" fill={chartSeries.positive} name="Avg Points" radius={[0, 8, 8, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <WorldChoroplethMap 
+              countryData={stats.allCountries} 
+              gameData={filteredGames}
+              isDark={isDark} 
+            />
           </ChartCard>
+        </div>
 
+        <div className="mb-8">
           <ChartCard
-            title="Worst Countries by Performance"
-            icon={<TrendingDown />}
-            tooltip="Countries with the lowest average points."
+            title="Country Confusion Matrix"
+            icon={<Target />}
+            tooltip="Heatmap showing which countries were guessed when the actual location was in a different country. Vertical axis shows actual location country, horizontal axis shows guessed country. Values represent the percentage of times each country was guessed."
             isDark={isDark}
           >
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={stats.worstCountries} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
-                <XAxis type="number" stroke={chartAxisColor} />
-                <YAxis type="category" dataKey="country" stroke={chartAxisColor} width={120} interval={0} />
-                <Tooltip content={<CountryBarTooltip isDark={isDark} />} />
-                <Legend />
-                <Bar dataKey="avgPoints" fill={chartSeries.negative} name="Avg Points" radius={[0, 8, 8, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <ConfusionMatrixHeatmap 
+              confusionMatrix={stats.confusionMatrix}
+              isDark={isDark}
+            />
           </ChartCard>
         </div>
 
@@ -1324,6 +1557,472 @@ function App() {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+function WorldChoroplethMap({ countryData, gameData, isDark }) {
+  const [hoveredCountry, setHoveredCountry] = useState(null)
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const [center, setCenter] = useState([0, 0])
+  const [selectedCountry, setSelectedCountry] = useState(null)
+  const [hoveredLocation, setHoveredLocation] = useState(null)
+
+  const countryDataMap = useMemo(() => {
+    const map = {}
+    countryData.forEach(item => {
+      const iso3 = COUNTRY_NAME_TO_ISO3[item.country]
+      if (iso3) {
+        map[iso3] = item
+      }
+      map[item.country] = item
+    })
+    
+    Object.entries(GEOJSON_TO_COUNTRY_NAME).forEach(([geoName, ourName]) => {
+      const data = countryData.find(c => c.country === ourName)
+      if (data) {
+        map[geoName] = data
+      }
+    })
+    
+    return map
+  }, [countryData])
+
+  const minPoints = useMemo(() => {
+    if (countryData.length === 0) return 0
+    return Math.min(...countryData.map(c => c.avgPoints))
+  }, [countryData])
+
+  const maxPoints = useMemo(() => {
+    if (countryData.length === 0) return 5000
+    return Math.max(...countryData.map(c => c.avgPoints))
+  }, [countryData])
+
+  const countryLocations = useMemo(() => {
+    const locations = {}
+    
+    console.log('Building countryLocations...')
+    console.log('gameData:', gameData)
+    console.log('gameData is array?', Array.isArray(gameData))
+    console.log('gameData length:', gameData?.length)
+    
+    if (!gameData || !Array.isArray(gameData)) {
+      console.log('gameData is invalid, returning empty locations')
+      return locations
+    }
+    
+    let totalRounds = 0
+    let processedRounds = 0
+    
+    gameData.forEach((game, gameIdx) => {
+      if (game.game?.rounds) {
+        totalRounds += game.game.rounds.length
+        game.game.rounds.forEach((round, roundIdx) => {
+          if (!round.location) {
+            console.log(`Game ${gameIdx}, Round ${roundIdx}: No location`)
+            return
+          }
+          
+          let countryCode = round.location.country
+          if (!countryCode && round.location.lat != null && round.location.long != null) {
+            countryCode = getCountryFromCoordinates(round.location.lat, round.location.long)
+          }
+          const country = COUNTRY_NAMES[countryCode] || countryCode
+          
+          if (!country || country === 'Unknown') {
+            console.log(`Game ${gameIdx}, Round ${roundIdx}: Unknown country (code: ${countryCode})`)
+            return
+          }
+          
+          if (!locations[country]) {
+            locations[country] = []
+          }
+          
+          if (round.location.lat != null && round.location.long != null) {
+            locations[country].push({
+              lat: round.location.lat,
+              lng: round.location.long
+            })
+            processedRounds++
+          }
+        })
+      }
+    })
+    
+    console.log(`Processed ${processedRounds} out of ${totalRounds} rounds`)
+    console.log('Final countryLocations:', locations)
+    console.log('Countries found:', Object.keys(locations))
+    
+    return locations
+  }, [gameData])
+
+  const locationGuesses = useMemo(() => {
+    const guesses = {}
+    
+    if (!gameData || !Array.isArray(gameData)) {
+      return guesses
+    }
+    
+    console.log('Building locationGuesses...')
+    let totalGuesses = 0
+    
+    gameData.forEach((game, gameIdx) => {
+      game.game?.rounds?.forEach((round, roundIdx) => {
+        if (!round.location) return
+        
+        let countryCode = round.location.country
+        if (!countryCode && round.location.lat != null && round.location.long != null) {
+          countryCode = getCountryFromCoordinates(round.location.lat, round.location.long)
+        }
+        const country = COUNTRY_NAMES[countryCode] || countryCode
+        if (!country || country === 'Unknown') return
+        
+        if (round.location.lat != null && round.location.long != null) {
+          const locationKey = `${round.location.lat},${round.location.long}`
+          
+          if (!guesses[locationKey]) {
+            guesses[locationKey] = {
+              actualLat: round.location.lat,
+              actualLng: round.location.long,
+              country: country,
+              guesses: []
+            }
+          }
+          
+          const guessesArray = round.allGuesses || []
+          
+          guessesArray.forEach((guess) => {
+            if (guess.guessLat != null && guess.guessLong != null) {
+              guesses[locationKey].guesses.push({
+                lat: guess.guessLat,
+                lng: guess.guessLong,
+                player: guess.username || 'Unknown'
+              })
+              totalGuesses++
+            }
+          })
+        }
+      })
+    })
+    
+    console.log(`Total guesses extracted: ${totalGuesses}`)
+    console.log('locationGuesses:', guesses)
+    console.log('Sample location keys:', Object.keys(guesses).slice(0, 5))
+    
+    return guesses
+  }, [gameData])
+
+  const getCountryBounds = (countryName) => {
+    const locations = countryLocations[countryName]
+    if (!locations || locations.length === 0) return null
+    
+    const lats = locations.map(l => l.lat)
+    const lngs = locations.map(l => l.lng)
+    
+    return {
+      minLat: Math.min(...lats),
+      maxLat: Math.max(...lats),
+      minLng: Math.min(...lngs),
+      maxLng: Math.max(...lngs),
+      centerLat: (Math.min(...lats) + Math.max(...lats)) / 2,
+      centerLng: (Math.min(...lngs) + Math.max(...lngs)) / 2
+    }
+  }
+
+  const getColorForPoints = (points) => {
+    if (points == null) return isDark ? '#1e293b' : '#e2e8f0'
+    
+    const normalized = (points - minPoints) / (maxPoints - minPoints)
+    
+    const red = { r: 239, g: 68, b: 68 }
+    const yellow = { r: 250, g: 204, b: 21 }
+    const green = { r: 34, g: 197, b: 94 }
+    
+    let r, g, b
+    if (normalized < 0.5) {
+      const t = normalized * 2
+      r = Math.round(red.r + (yellow.r - red.r) * t)
+      g = Math.round(red.g + (yellow.g - red.g) * t)
+      b = Math.round(red.b + (yellow.b - red.b) * t)
+    } else {
+      const t = (normalized - 0.5) * 2
+      r = Math.round(yellow.r + (green.r - yellow.r) * t)
+      g = Math.round(yellow.g + (green.g - yellow.g) * t)
+      b = Math.round(yellow.b + (green.b - yellow.b) * t)
+    }
+    
+    return `rgb(${r}, ${g}, ${b})`
+  }
+
+  const handleMouseMove = (event) => {
+    const tooltipWidth = 200
+    const tooltipHeight = 80
+    const offset = 5
+    
+    let x = event.clientX + offset
+    let y = event.clientY + offset
+    
+    if (x + tooltipWidth > window.innerWidth) {
+      x = event.clientX - tooltipWidth - offset
+    }
+    
+    if (y + tooltipHeight > window.innerHeight) {
+      y = event.clientY - tooltipHeight - offset
+    }
+    
+    setTooltipPosition({ x, y })
+  }
+
+  const handleZoomIn = () => {
+    setZoom(z => Math.min(z * 1.5, 8))
+  }
+
+  const handleZoomOut = () => {
+    setZoom(z => Math.max(z / 1.5, 1))
+  }
+
+  const handleMoveEnd = (position) => {
+    setCenter(position.coordinates)
+    setZoom(position.zoom)
+  }
+
+  const handleCountryClick = (countryInfo) => {
+    if (!countryInfo) return
+    
+    console.log('Clicked country:', countryInfo.country)
+    console.log('All countryLocations:', countryLocations)
+    console.log('Countries with locations:', Object.keys(countryLocations))
+    console.log('Number of countries with locations:', Object.keys(countryLocations).length)
+    
+    const bounds = getCountryBounds(countryInfo.country)
+    if (!bounds) {
+      console.log(`No locations found for ${countryInfo.country}`)
+      return
+    }
+    
+    setSelectedCountry(countryInfo.country)
+    setCenter([bounds.centerLng, bounds.centerLat])
+    setZoom(5)
+  }
+
+  const handleReset = () => {
+    setSelectedCountry(null)
+    setCenter([0, 0])
+    setZoom(1)
+  }
+
+  const handleLocationClick = (lat, lng) => {
+    const url = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
+  return (
+    <div className="relative" onMouseMove={handleMouseMove}>
+      {selectedCountry && (
+        <div className="absolute top-2 left-2 z-10">
+          <div className={`rounded-lg px-4 py-3 text-sm shadow-lg ${
+            isDark ? 'bg-slate-800 text-slate-100 border border-slate-700' : 'bg-white text-slate-900 border border-slate-300'
+          }`}>
+            <p className="font-bold text-base mb-1">{selectedCountry}</p>
+            <p className="text-xs mb-3">{countryLocations[selectedCountry]?.length || 0} locations visited</p>
+            <button
+              onClick={handleReset}
+              className={`w-full rounded px-3 py-1.5 text-xs font-medium transition-colors ${
+                isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-100' : 'bg-slate-100 hover:bg-slate-200 text-slate-900'
+              }`}
+            >
+              ← Back to World Map
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="absolute top-2 right-2 z-10 flex flex-col gap-2">
+        <button
+          onClick={handleZoomIn}
+          className={`w-8 h-8 rounded flex items-center justify-center font-bold transition-colors ${
+            isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-100' : 'bg-white hover:bg-slate-100 text-slate-900 border border-slate-300'
+          }`}
+          aria-label="Zoom in"
+        >
+          +
+        </button>
+        <button
+          onClick={handleZoomOut}
+          className={`w-8 h-8 rounded flex items-center justify-center font-bold transition-colors ${
+            isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-100' : 'bg-white hover:bg-slate-100 text-slate-900 border border-slate-300'
+          }`}
+          aria-label="Zoom out"
+        >
+          −
+        </button>
+      </div>
+      <ComposableMap
+        projection="geoMercator"
+        projectionConfig={{
+          scale: 120
+        }}
+        style={{ width: '100%', height: 'auto' }}
+      >
+        <ZoomableGroup
+          zoom={zoom}
+          center={center}
+          onMoveEnd={handleMoveEnd}
+        >
+          <Geographies geography="https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json">
+            {({ geographies }) =>
+              geographies.map((geo) => {
+                const geoName = geo.properties?.name || geo.id
+                const countryInfo = countryDataMap[geo.id] || countryDataMap[geoName]
+                const fillColor = countryInfo 
+                  ? getColorForPoints(countryInfo.avgPoints)
+                  : (isDark ? '#1e293b' : '#e2e8f0')
+                
+                return (
+                  <Geography
+                    key={geo.rsmKey}
+                    geography={geo}
+                    fill={fillColor}
+                    stroke={isDark ? '#475569' : '#cbd5e1'}
+                    strokeWidth={0.5}
+                    style={{
+                      default: { 
+                        outline: 'none', 
+                        cursor: countryInfo ? 'pointer' : 'default',
+                        pointerEvents: 'all'
+                      },
+                      hover: { 
+                        fill: countryInfo ? fillColor : (isDark ? '#334155' : '#cbd5e1'),
+                        outline: 'none',
+                        opacity: 0.8,
+                        cursor: countryInfo ? 'pointer' : 'default',
+                        pointerEvents: 'all'
+                      },
+                      pressed: { 
+                        outline: 'none',
+                        pointerEvents: 'all'
+                      }
+                    }}
+                    onMouseEnter={() => {
+                      if (countryInfo) {
+                        setHoveredCountry(countryInfo)
+                      }
+                    }}
+                    onMouseLeave={() => setHoveredCountry(null)}
+                    onClick={() => {
+                      console.log('Country clicked:', countryInfo?.country)
+                      handleCountryClick(countryInfo)
+                    }}
+                  />
+                )
+              })
+            }
+          </Geographies>
+          
+          {selectedCountry && hoveredLocation && locationGuesses[hoveredLocation] && (
+            <>
+              {locationGuesses[hoveredLocation].guesses.map((guess, idx) => (
+                <MapLine
+                  key={`line-${idx}`}
+                  from={[locationGuesses[hoveredLocation].actualLng, locationGuesses[hoveredLocation].actualLat]}
+                  to={[guess.lng, guess.lat]}
+                  stroke={isDark ? '#60a5fa' : '#3b82f6'}
+                  strokeWidth={0.5}
+                  strokeOpacity={0.8}
+                  strokeLinecap="round"
+                />
+              ))}
+              {locationGuesses[hoveredLocation].guesses.map((guess, idx) => (
+                <Marker key={`marker-${idx}`} coordinates={[guess.lng, guess.lat]}>
+                  <g>
+                    <circle
+                      r={0.5}
+                      fill={isDark ? '#60a5fa' : '#3b82f6'}
+                      stroke="none"
+                    />
+                    <text
+                      textAnchor="middle"
+                      y={-1.5}
+                      style={{
+                        fontFamily: 'system-ui',
+                        fontSize: '3px',
+                        fill: isDark ? '#e0e7ff' : '#1e3a8a',
+                        fontWeight: 'bold',
+                        pointerEvents: 'none'
+                      }}
+                    >
+                      {guess.player}
+                    </text>
+                  </g>
+                </Marker>
+              ))}
+            </>
+          )}
+          
+          {selectedCountry && countryLocations[selectedCountry] && (
+            countryLocations[selectedCountry].map((location, idx) => (
+              <Marker 
+                key={idx} 
+                coordinates={[location.lng, location.lat]}
+                onClick={() => handleLocationClick(location.lat, location.lng)}
+              >
+                <g 
+                  className="cursor-pointer" 
+                  style={{ pointerEvents: 'all' }}
+                  onMouseEnter={() => {
+                    const key = `${location.lat},${location.lng}`
+                    console.log('Hovering over location:', key)
+                    console.log('locationGuesses for this key:', locationGuesses[key])
+                    setHoveredLocation(key)
+                  }}
+                  onMouseLeave={() => {
+                    console.log('Mouse left location')
+                    setHoveredLocation(null)
+                  }}
+                >
+                  <circle
+                    r={0.75}
+                    fill="#ef4444"
+                    stroke="none"
+                    className="transition-all hover:r-6"
+                  />
+                  <circle
+                    r={4}
+                    fill="transparent"
+                    className="cursor-pointer"
+                  />
+                </g>
+              </Marker>
+            ))
+          )}
+        </ZoomableGroup>
+      </ComposableMap>
+
+      {hoveredCountry && (
+        <div
+          className={`fixed z-50 pointer-events-none rounded-lg px-3 py-2 text-sm shadow-xl ${
+            isDark ? 'bg-slate-900 text-slate-100 border border-slate-700' : 'bg-white text-slate-900 border border-slate-200'
+          }`}
+          style={{
+            left: `${tooltipPosition.x}px`,
+            top: `${tooltipPosition.y}px`
+          }}
+        >
+          <p className="font-semibold mb-1">{hoveredCountry.country}</p>
+          <p>Avg Points: {hoveredCountry.avgPoints}</p>
+          <p>Rounds Seen: {hoveredCountry.count.toLocaleString()}</p>
+        </div>
+      )}
+
+      <div className={`mt-4 flex items-center justify-center gap-2 text-xs ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+        <span>Worst</span>
+        <div className="flex items-center gap-1">
+          <div className="w-8 h-4 rounded" style={{ background: 'rgb(239, 68, 68)' }}></div>
+          <div className="w-8 h-4 rounded" style={{ background: 'rgb(250, 204, 21)' }}></div>
+          <div className="w-8 h-4 rounded" style={{ background: 'rgb(34, 197, 94)' }}></div>
+        </div>
+        <span>Best</span>
       </div>
     </div>
   )
