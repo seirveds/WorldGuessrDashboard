@@ -3,6 +3,7 @@ import { Trophy, TrendingUp, Target, Clock, Globe, Award, BarChart3, TrendingDow
 import { BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { ComposableMap, Geographies, Geography, ZoomableGroup, Marker, Line as MapLine } from 'react-simple-maps'
 import { scrapeGamesFromSecret, loadGamesFromCookie, saveGamesToCookie, clearGamesCookie } from './lib/worldguessrScraper'
+import ConfusionMatrixHeatmap from './components/ConfusionMatrixHeatmap'
 
 const CHART_SERIES = {
   dark: {
@@ -861,16 +862,18 @@ function App() {
         worstCountries: [],
         mostOccurringCountries: [],
         performanceOverTime: [],
+        confusionMatrix: {},
         totalGames: 0,
         totalPlayers: 0
       })
       return
     }
 
+    const excludedUsersSet = new Set(activeExcludedUsers)
     const playerStats = {}
     const gamesByDate = {}
     const countryPerformance = {}
-    const excludedUsersSet = new Set(activeExcludedUsers)
+    const confusionMatrix = {}
     let totalIncludedGames = 0
     
     filteredGames.forEach(game => {
@@ -927,6 +930,20 @@ function App() {
 
           roundPointsTotal += guess.points
           roundGuessCount++
+          
+          // Extract guessed country for confusion matrix
+          if (guess.guessLat != null && guess.guessLong != null) {
+            let guessedCountryCode = getCountryFromCoordinates(guess.guessLat, guess.guessLong)
+            const guessedCountry = COUNTRY_NAMES[guessedCountryCode] || guessedCountryCode || 'Unknown'
+            
+            if (!confusionMatrix[country]) {
+              confusionMatrix[country] = {}
+            }
+            if (!confusionMatrix[country][guessedCountry]) {
+              confusionMatrix[country][guessedCountry] = 0
+            }
+            confusionMatrix[country][guessedCountry]++
+          }
         })
 
         if (roundGuessCount > 0) {
@@ -1008,6 +1025,7 @@ function App() {
       worstCountries,
       mostOccurringCountries,
       performanceOverTime,
+      confusionMatrix,
       totalGames: totalIncludedGames,
       totalPlayers: Object.keys(playerStats).length
     })
@@ -1456,6 +1474,20 @@ function App() {
               countryData={stats.allCountries} 
               gameData={filteredGames}
               isDark={isDark} 
+            />
+          </ChartCard>
+        </div>
+
+        <div className="mb-8">
+          <ChartCard
+            title="Country Confusion Matrix"
+            icon={<Target />}
+            tooltip="Heatmap showing which countries were guessed when the actual location was in a different country. Vertical axis shows actual location country, horizontal axis shows guessed country. Values represent the percentage of times each country was guessed."
+            isDark={isDark}
+          >
+            <ConfusionMatrixHeatmap 
+              confusionMatrix={stats.confusionMatrix}
+              isDark={isDark}
             />
           </ChartCard>
         </div>
